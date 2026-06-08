@@ -26,7 +26,10 @@ export default function Sidebar({ page, setPage }) {
 
   useEffect(() => {
     getBalance()
-      .then(d => setBalance(d?.balance ?? '—'))
+      .then(d => {
+        const usd = parseFloat(d?.balance);
+        setBalance(isNaN(usd) ? '—' : (usd * 90).toFixed(2) + ' ₽');
+      })
       .catch(() => setBalance('—'));
   }, []);
 
@@ -42,8 +45,9 @@ export default function Sidebar({ page, setPage }) {
       <div className="sidebar-balance">
         <div className="balance-label">Баланс</div>
         <div className="balance-amount">
-          {balance === null ? <span className="spinner" style={{ width: 16, height: 16 }} /> : `$${balance}`}
+          {balance === null ? <span className="spinner" style={{ width: 18, height: 18 }} /> : balance}
         </div>
+        <button className="balance-topup">+ Пополнить</button>
       </div>
 
       <nav className="sidebar-nav">

@@ -23,6 +23,7 @@ export default function App() {
     <ToastProvider>
       <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
+      <div className="bg-orb bg-orb-3" />
       <div className="layout">
         <Sidebar page={page} setPage={setPage} />
         <main className="main">

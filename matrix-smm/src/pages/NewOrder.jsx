@@ -182,9 +182,9 @@ export default function NewOrder() {
     if (!link.trim()) { toast('Введите ссылку','error'); return; }
     setBusy(true);
     try {
-      const isCustomComments = svc.type && svc.type.toLowerCase().includes('custom');
-      const orderPayload = { service: svc.service, link: link.trim(), quantity: safeQty };
-      if (isCustomComments && comments.trim()) orderPayload.comments = comments.trim();
+        const orderPayload = { service: svc.service, link: link.trim(), quantity: safeQty };
+      const isComment = svc.type && ['comment','like_to_comment','dislike_to_comment'].includes(svc.type.toLowerCase());
+      if (isComment && comments.trim()) orderPayload.comments = comments.trim();
       const res = await createOrder(orderPayload);
       if (res.order) {
         toast(`Заказ #${res.order} создан`);
@@ -312,7 +312,8 @@ export default function NewOrder() {
     const hasCancel  = svc.cancel === '1' || svc.cancel === true || svc.cancel === 1;
     const speedLabel = { '0':'Медленно','1':'Быстро','2':'Молниеносно' }[svc.speed] || 'Быстро';
     const displayIcon = (cat?.icon) || net?.icon || 'telegram';
-    const isCustomComments = svc.type && svc.type.toLowerCase().includes('custom');
+    const COMMENT_TYPES_FORM = ['comment', 'like_to_comment', 'dislike_to_comment'];
+    const isCustomComments = svc.type && COMMENT_TYPES_FORM.includes(svc.type.toLowerCase());
 
     return (
       <>

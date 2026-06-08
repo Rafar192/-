@@ -1,0 +1,12 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tgp" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#B967FF"/>
+      <stop offset="100%" stop-color="#7B2FBE"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#tgp)"/>
+  <rect x="0" y="0" width="64" height="28" rx="14" fill="rgba(255,255,255,0.1)"/>
+  <path d="M14 31L50 17L42 49L29.5 39L23 44.5V37L43 22.5L21 34.5L14 31Z" fill="white" opacity="0.9"/>
+  <polygon points="44,12 47,18 53,19 48,24 49,30 44,27 39,30 40,24 35,19 41,18" fill="#FFD700" opacity="0.9"/>
+</svg>

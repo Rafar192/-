@@ -654,3 +654,40 @@ body::after {
   .info-chips { grid-template-columns: 1fr 1fr; }
   .page-content { padding: 14px 16px; }
 }
+
+/* ── SUBCATEGORY GRID ─── */
+.subcat-grid { display: flex; flex-direction: column; gap: 8px; }
+
+.subcat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer; transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.subcat-card::before {
+  content: ''; position: absolute; top:0;left:0;right:0;height:1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+}
+.subcat-card::after {
+  content: ''; position: absolute; left:0;top:0;bottom:0;width:3px;
+  background: linear-gradient(180deg, var(--violet), var(--cyan));
+  border-radius: 0 3px 3px 0; opacity:0; transition: opacity 0.2s;
+  box-shadow: 0 0 12px var(--glow-v);
+}
+.subcat-card:hover { border-color: rgba(139,92,246,0.35); background: var(--bg3); transform: translateX(5px); }
+.subcat-card:hover::after { opacity:1; }
+
+.subcat-icon { width: 44px; height: 44px; border-radius: 12px; overflow:hidden; flex-shrink:0; box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
+.subcat-icon img, .subcat-icon svg { width:100%;height:100%;display:block;object-fit:cover; }
+.subcat-body { flex: 1; }
+.subcat-name { font-weight: 700; font-size: 14px; }
+.subcat-count { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* Sub indicator dot on network card */
+.net-has-sub {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--violet); flex-shrink: 0;
+  box-shadow: 0 0 8px var(--glow-v);
+  margin-right: 2px;
+}

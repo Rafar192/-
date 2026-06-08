@@ -1,0 +1,6 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="tv" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1FCECB"/><stop offset="100%" stop-color="#0DA8A5"/></linearGradient></defs>
+  <rect width="64" height="64" rx="14" fill="url(#tv)"/>
+  <rect x="0" y="0" width="64" height="28" rx="14" fill="rgba(255,255,255,0.1)"/>
+  <path d="M12 18h40v6H36v22h-8V24H12z" fill="white" opacity="0.9"/>
+</svg>

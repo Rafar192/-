@@ -185,6 +185,7 @@ export default function NewOrder() {
         const orderPayload = { service: svc.service, link: link.trim(), quantity: safeQty };
       const isComment = svc.type && ['comment','like_to_comment','dislike_to_comment'].includes(svc.type.toLowerCase());
       if (isComment && comments.trim()) orderPayload.comments = comments.trim();
+      if (svc.type?.toLowerCase() === 'vote' && comments.trim()) orderPayload.answer = comments.trim();
       const res = await createOrder(orderPayload);
       if (res.order) {
         toast(`Заказ #${res.order} создан`);
@@ -314,6 +315,7 @@ export default function NewOrder() {
     const displayIcon = (cat?.icon) || net?.icon || 'telegram';
     const COMMENT_TYPES_FORM = ['comment', 'like_to_comment', 'dislike_to_comment'];
     const isCustomComments = svc.type && COMMENT_TYPES_FORM.includes(svc.type.toLowerCase());
+    const isVote = svc.type && svc.type.toLowerCase() === 'vote';
 
     return (
       <>
@@ -353,6 +355,12 @@ export default function NewOrder() {
                 <div className="f-group">
                   <label className="f-label">Комментарии (по одному на строку)</label>
                   <textarea className="f-textarea" rows={5} placeholder={"Комментарий 1\nКомментарий 2\n..."} value={comments} onChange={e=>setComments(e.target.value)}/>
+                </div>
+              )}
+              {isVote && (
+                <div className="f-group">
+                  <label className="f-label">Вариант ответа в опросе</label>
+                  <input className="f-input" placeholder="Введите текст ответа..." value={comments} onChange={e=>setComments(e.target.value)} required/>
                 </div>
               )}
 

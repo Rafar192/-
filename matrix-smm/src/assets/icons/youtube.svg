@@ -1,1 +1,12 @@
-<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#1a1e2a"/><text x="24" y="32" text-anchor="middle" fill="#555" font-size="20" font-weight="bold" font-family="Arial">y</text></svg>
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="yt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF3D00"/>
+      <stop offset="100%" stop-color="#CC0000"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#yt)"/>
+  <rect x="0" y="0" width="64" height="28" rx="14" fill="rgba(255,255,255,0.1)"/>
+  <rect x="10" y="20" width="44" height="24" rx="7" fill="white" opacity="0.95"/>
+  <polygon points="27,26 27,38 40,32" fill="#CC0000"/>
+</svg>

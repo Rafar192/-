@@ -4,12 +4,28 @@ import { icons, NETWORKS } from '../icons';
 import { useToast } from '../components/Toast';
 
 const USD_RUB = 90;
-const toRub = (rate, qty) => { const r = parseFloat(rate); return (!r || isNaN(r)) ? '0.00' : ((r * USD_RUB * qty) / 1000).toFixed(2); };
-const rateRub = (rate) => { const r = parseFloat(rate); return (!r || isNaN(r)) ? '0.00' : (r * USD_RUB).toFixed(2); };
-const fmt = (n) => Number(n).toLocaleString('ru-RU');
+const toRub    = (rate, qty) => { const r = parseFloat(rate); return (!r||isNaN(r)) ? '0.00' : ((r*USD_RUB*qty)/1000).toFixed(2); };
+const rateRub  = (rate)      => { const r = parseFloat(rate); return (!r||isNaN(r)) ? '0.00' : (r*USD_RUB).toFixed(2); };
+const fmt      = (n)         => Number(n).toLocaleString('ru-RU');
 
 const PRESETS = [100, 500, 1000, 5000, 10000];
 
+// ── Utilities ─────────────────────────────────────────────
+// Pick the icon key for a category name (based on which network keyword matched)
+function iconForCat(catName, network) {
+  const cn = catName.toLowerCase();
+  // Special case: Telegram Premium gets its own icon
+  if (cn.includes('premium')) return 'telegram_premium';
+  return network.icon;
+}
+
+// Match a service to a network via its category field
+function svcMatchesNetwork(svc, network) {
+  const cat = (svc.category || svc.name || '').toLowerCase();
+  return network.keywords.some(k => cat.includes(k.toLowerCase()));
+}
+
+// ── Icons ─────────────────────────────────────────────────
 const BackIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="15" height="15">
     <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -32,29 +48,24 @@ const LinkIcon = () => (
   </svg>
 );
 
-// Match services to keywords (case-insensitive, checks name+category)
-function matchSvc(svc, keywords) {
-  const haystack = ((svc.name || '') + ' ' + (svc.category || '')).toLowerCase();
-  return keywords.some(k => haystack.includes(k.toLowerCase()));
-}
-
+// ── Component ──────────────────────────────────────────────
 export default function NewOrder() {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('networks'); // networks | subcats | services | form
-  const [net, setNet] = useState(null);
-  const [subcat, setSubcat] = useState(null);
-  const [svc, setSvc] = useState(null);
-  const [search, setSearch] = useState('');
-  const [link, setLink] = useState('');
-  const [qty, setQty] = useState(100);
-  const [qtyRaw, setQtyRaw] = useState('100');
+  const [services, setServices]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [view, setView]             = useState('networks'); // networks | categories | services | form
+  const [net, setNet]               = useState(null);
+  const [cat, setCat]               = useState(null);   // { name, icon, services[] }
+  const [svc, setSvc]               = useState(null);
+  const [search, setSearch]         = useState('');
+  const [link, setLink]             = useState('');
+  const [qty, setQty]               = useState(100);
+  const [qtyRaw, setQtyRaw]         = useState('100');
   const [useInterval, setUseInterval] = useState(false);
-  const [intRuns, setIntRuns] = useState('');
-  const [intMin, setIntMin] = useState('');
-  const [fav, setFav] = useState(false);
-  const [descOpen, setDescOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [intRuns, setIntRuns]       = useState('');
+  const [intMin, setIntMin]         = useState('');
+  const [fav, setFav]               = useState(false);
+  const [descOpen, setDescOpen]     = useState(false);
+  const [busy, setBusy]             = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -63,46 +74,54 @@ export default function NewOrder() {
       .catch(() => { setServices([]); setLoading(false); });
   }, []);
 
-  // Services for current subcat/net (flat keywords mode)
-  const listServices = useMemo(() => {
-    const kws = subcat ? subcat.keywords : (net?.keywords || []);
-    if (!kws.length) return [];
-    return services.filter(s => matchSvc(s, kws));
-  }, [services, net, subcat]);
+  // ── Parse categories from API for selected network ────────
+  // Group services by their `category` field, only for current network
+  const catsForNet = useMemo(() => {
+    if (!net) return [];
+    const netSvcs = services.filter(s => svcMatchesNetwork(s, net));
+    // Group by category field
+    const map = {};
+    netSvcs.forEach(s => {
+      const catName = s.category || s.name || 'Другое';
+      if (!map[catName]) map[catName] = { name: catName, services: [], icon: iconForCat(catName, net) };
+      map[catName].services.push(s);
+    });
+    // Sort by service count desc
+    return Object.values(map).sort((a, b) => b.services.length - a.services.length);
+  }, [services, net]);
 
-  // Count services per subcat
-  const subcatCount = (sub) => services.filter(s => matchSvc(s, sub.keywords)).length;
+  // Services in selected category
+  const catServices = cat ? cat.services : [];
 
-  // Count services per network
-  const netCount = (n) => {
-    if (n.sub) return services.filter(s => n.sub.some(sc => matchSvc(s, sc.keywords))).length;
-    return services.filter(s => matchSvc(s, n.keywords || [])).length;
-  };
+  // Total service count for a network
+  const netCount = (n) => services.filter(s => svcMatchesNetwork(s, n)).length;
 
   // Filtered networks for search
   const filteredNets = useMemo(() => {
     if (!search) return NETWORKS;
     const q = search.toLowerCase();
-    return NETWORKS.filter(n =>
-      n.name.toLowerCase().includes(q) ||
-      (n.keywords || []).some(k => k.toLowerCase().includes(q)) ||
-      (n.sub || []).some(sc => sc.name.toLowerCase().includes(q))
-    );
+    return NETWORKS.filter(n => n.name.toLowerCase().includes(q));
   }, [search]);
 
-  const minQ = svc ? Math.max(1, parseInt(svc.min) || 10) : 10;
-  const maxQ = svc ? parseInt(svc.max) || 100000 : 100000;
+  // ── Order form state ──────────────────────────────────────
+  const minQ    = svc ? Math.max(1, parseInt(svc.min) || 10) : 10;
+  const maxQ    = svc ? parseInt(svc.max) || 100000 : 100000;
   const safeQty = Math.max(minQ, Math.min(maxQ, qty));
-  const sliderPct = maxQ > minQ ? Math.max(0, Math.min(100, ((safeQty - minQ) / (maxQ - minQ)) * 100)) : 0;
-  const total = svc ? toRub(svc.rate, safeQty) : '0.00';
-  const rate  = svc ? rateRub(svc.rate) : '0.00';
+  const sliderPct = maxQ > minQ ? Math.max(0, Math.min(100, ((safeQty-minQ)/(maxQ-minQ))*100)) : 0;
+  const total   = svc ? toRub(svc.rate, safeQty) : '0.00';
+  const rate    = svc ? rateRub(svc.rate) : '0.00';
 
   function pickNet(n) {
     setNet(n); setSearch('');
-    if (n.sub) { setView('subcats'); }
-    else { setSubcat(null); setView('services'); }
+    const count = services.filter(s => svcMatchesNetwork(s, n)).length;
+    if (count === 0) { toast(`Для ${n.name} услуг пока нет`, 'error'); return; }
+    setView('categories');
   }
-  function pickSubcat(sc) { setSubcat(sc); setView('services'); }
+  function pickCat(c) {
+    // If only 1 service in category — jump straight to form
+    if (c.services.length === 1) { pickSvc(c.services[0]); return; }
+    setCat(c); setView('services');
+  }
   function pickSvc(s) {
     setSvc(s);
     const q = Math.max(1, parseInt(s.min) || 10);
@@ -112,38 +131,40 @@ export default function NewOrder() {
     setView('form');
   }
 
-  function handleSlider(e) { const v = Number(e.target.value); setQty(v); setQtyRaw(String(v)); }
+  function handleSlider(e) { const v=Number(e.target.value); setQty(v); setQtyRaw(String(v)); }
   function handleQtyChange(e) {
-    const raw = e.target.value.replace(/\D/g, '');
+    const raw = e.target.value.replace(/\D/g,'');
     setQtyRaw(raw);
-    if (raw) setQty(Math.max(minQ, Math.min(maxQ, parseInt(raw))));
+    if (raw) setQty(Math.max(minQ,Math.min(maxQ,parseInt(raw))));
   }
   function handleQtyBlur() {
-    const v = Math.max(minQ, Math.min(maxQ, parseInt(qtyRaw) || minQ));
+    const v = Math.max(minQ,Math.min(maxQ,parseInt(qtyRaw)||minQ));
     setQty(v); setQtyRaw(String(v));
   }
+  function applyPreset(p) { const v=Math.max(minQ,Math.min(maxQ,p)); setQty(v); setQtyRaw(String(v)); }
 
   async function submit(e) {
     e.preventDefault();
-    if (!link.trim()) { toast('Введите ссылку', 'error'); return; }
+    if (!link.trim()) { toast('Введите ссылку','error'); return; }
     setBusy(true);
     try {
       const res = await createOrder({ service: svc.service, link: link.trim(), quantity: safeQty });
       if (res.order) {
         toast(`Заказ #${res.order} создан`);
-        const saved = JSON.parse(localStorage.getItem('orders') || '[]');
-        saved.unshift({ id: res.order, service: svc.name, link: link.trim(), qty: safeQty, price: total + ' ₽', status: 'Pending', date: new Date().toLocaleString('ru-RU') });
+        const saved = JSON.parse(localStorage.getItem('orders')||'[]');
+        saved.unshift({ id:res.order, service:svc.name, link:link.trim(), qty:safeQty, price:`${total} ₽`, status:'Pending', date:new Date().toLocaleString('ru-RU') });
         localStorage.setItem('orders', JSON.stringify(saved));
-        setView('networks'); setNet(null); setSubcat(null); setSvc(null); setLink('');
-      } else { toast(res.error || 'Ошибка', 'error'); }
-    } catch { toast('Ошибка соединения', 'error'); }
+        setView('networks'); setNet(null); setCat(null); setSvc(null); setLink('');
+      } else { toast(res.error||'Ошибка','error'); }
+    } catch { toast('Ошибка соединения','error'); }
     setBusy(false);
   }
 
+  // ════════════════════════════════════════════════════════════
   if (loading) return (
     <>
       <div className="topbar"><span className="topbar-title">Новый заказ</span></div>
-      <div className="loading-wrap"><div className="spinner" /><span>Загрузка услуг...</span></div>
+      <div className="loading-wrap"><div className="spinner"/><span>Загрузка услуг...</span></div>
     </>
   );
 
@@ -159,21 +180,20 @@ export default function NewOrder() {
           <svg className="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
           </svg>
-          <input placeholder="Поиск соцсети..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input placeholder="Поиск соцсети..." value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
         <div className="network-grid">
           {filteredNets.map(n => {
             const cnt = netCount(n);
             return (
-              <div key={n.id} className="network-card-outer" onClick={() => pickNet(n)}>
+              <div key={n.id} className="network-card-outer" onClick={()=>pickNet(n)}>
                 <div className="network-card-inner">
                   <div className="net-icon-wrap">{icons[n.icon]}</div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{flex:1}}>
                     <div className="net-name">{n.name}</div>
-                    {cnt > 0 && <div className="net-count">{cnt} услуг</div>}
+                    <div className="net-count">{cnt > 0 ? `${cnt} услуг` : 'нет услуг'}</div>
                   </div>
-                  {n.sub && <span className="net-has-sub" title="Есть подкатегории" />}
-                  <svg className="net-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                  {cnt > 0 && <svg className="net-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>}
                 </div>
               </div>
             );
@@ -183,29 +203,31 @@ export default function NewOrder() {
     </>
   );
 
-  /* ── 2. SUBCATEGORIES ── */
-  if (view === 'subcats') return (
+  /* ── 2. CATEGORIES (from API) ── */
+  if (view === 'categories') return (
     <>
       <div className="topbar">
-        <button className="back-btn" onClick={() => setView('networks')}><BackIcon /> Назад</button>
+        <button className="back-btn" onClick={()=>setView('networks')}><BackIcon/> Назад</button>
         <span className="topbar-title">{net.name}</span>
+        <span className="topbar-badge">{catsForNet.length} категорий</span>
       </div>
       <div className="page-content">
-        <div className="subcat-grid">
-          {net.sub.map(sc => {
-            const cnt = subcatCount(sc);
-            return (
-              <div key={sc.id} className="subcat-card" onClick={() => pickSubcat(sc)}>
-                <div className="subcat-icon">{icons[sc.icon]}</div>
+        {catsForNet.length === 0 ? (
+          <div className="empty-state"><div className="ico">?</div><h3>Нет категорий</h3><p>API не вернул категории для {net.name}</p></div>
+        ) : (
+          <div className="subcat-grid">
+            {catsForNet.map(c => (
+              <div key={c.name} className="subcat-card" onClick={()=>pickCat(c)}>
+                <div className="subcat-icon">{icons[c.icon] || icons[net.icon]}</div>
                 <div className="subcat-body">
-                  <div className="subcat-name">{sc.name}</div>
-                  {cnt > 0 && <div className="subcat-count">{cnt} услуг</div>}
+                  <div className="subcat-name">{c.name}</div>
+                  <div className="subcat-count">{c.services.length} услуг</div>
                 </div>
-                <ChevRight />
+                <ChevRight/>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
@@ -214,59 +236,47 @@ export default function NewOrder() {
   if (view === 'services') return (
     <>
       <div className="topbar">
-        <button className="back-btn" onClick={() => net.sub ? setView('subcats') : setView('networks')}>
-          <BackIcon /> Назад
-        </button>
-        <span className="topbar-title">{subcat ? subcat.name : net.name}</span>
-        <span className="topbar-badge">{listServices.length} услуг</span>
+        <button className="back-btn" onClick={()=>setView('categories')}><BackIcon/> Назад</button>
+        <span className="topbar-title">{cat.name}</span>
+        <span className="topbar-badge">{catServices.length} услуг</span>
       </div>
       <div className="page-content">
-        {listServices.length === 0 ? (
-          <div className="empty-state">
-            <div className="ico">?</div>
-            <h3>Услуги не найдены</h3>
-            <p>Попробуйте другую категорию</p>
-          </div>
-        ) : (
-          <>
-            <div className="svc-list-header">
-              <span className="svc-list-title">{subcat ? subcat.name : net.name}</span>
-              <span className="svc-list-price-label">Цена за 1000</span>
+        <div className="svc-list-header">
+          <span className="svc-list-title">{cat.name}</span>
+          <span className="svc-list-price-label">Цена за 1000</span>
+        </div>
+        <div className="service-list">
+          {catServices.map(s => (
+            <div key={s.service} className="service-item" onClick={()=>pickSvc(s)}>
+              <div className="svc-icon">{icons[cat.icon] || icons[net.icon]}</div>
+              <span className="svc-name">{s.name}</span>
+              <span className="svc-price-val">{rateRub(s.rate)} ₽</span>
+              <ChevRight/>
             </div>
-            <div className="service-list">
-              {listServices.map(s => (
-                <div key={s.service} className="service-item" onClick={() => pickSvc(s)}>
-                  <div className="svc-icon">{icons[subcat ? subcat.icon : net.icon]}</div>
-                  <span className="svc-name">{s.name}</span>
-                  <span className="svc-price-val">{rateRub(s.rate)} ₽</span>
-                  <ChevRight />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          ))}
+        </div>
       </div>
     </>
   );
 
   /* ── 4. ORDER FORM ── */
   if (view === 'form') {
-    const hasCancel = svc.cancel === '1' || svc.cancel === true || svc.cancel === 1;
-    const speedLabel = { '0': 'Медленно', '1': 'Быстро', '2': 'Молниеносно' }[svc.speed] || 'Быстро';
-    const displayIcon = subcat ? subcat.icon : net?.icon || 'telegram';
+    const hasCancel  = svc.cancel === '1' || svc.cancel === true || svc.cancel === 1;
+    const speedLabel = { '0':'Медленно','1':'Быстро','2':'Молниеносно' }[svc.speed] || 'Быстро';
+    const displayIcon = (cat?.icon) || net?.icon || 'telegram';
 
     return (
       <>
         <div className="topbar">
-          <button className="back-btn" onClick={() => setView('services')}><BackIcon /> Назад</button>
-          <span className="topbar-title" style={{ fontSize: 13 }}>{svc.name}</span>
+          <button className="back-btn" onClick={()=>setView('services')}><BackIcon/> Назад</button>
+          <span className="topbar-title" style={{fontSize:13}}>{svc.name}</span>
         </div>
         <div className="page-content">
           <div className="order-layout">
 
             {/* Header */}
             <div className="svc-header">
-              <div className="svc-header-icon">{icons[displayIcon]}</div>
+              <div className="svc-header-icon">{icons[displayIcon] || icons[net?.icon]}</div>
               <div className="svc-header-body">
                 <div className="svc-header-name">{svc.name}</div>
                 <div className="svc-chips">
@@ -274,72 +284,74 @@ export default function NewOrder() {
                   <span className="svc-chip">Мин: {fmt(svc.min)}</span>
                   <span className="svc-chip">Макс: {fmt(svc.max)}</span>
                   <span className="svc-chip">{speedLabel}</span>
-                  <span className={`svc-chip ${hasCancel ? 'green' : 'red'}`}>{hasCancel ? 'Есть отмена' : 'Нет отмены'}</span>
+                  <span className={`svc-chip ${hasCancel?'green':'red'}`}>{hasCancel?'Есть отмена':'Нет отмены'}</span>
                 </div>
               </div>
-              <button type="button" className={`fav-btn${fav ? ' on' : ''}`} onClick={() => setFav(v => !v)}>
-                {fav ? '★' : '☆'}
+              <button type="button" className={`fav-btn${fav?' on':''}`} onClick={()=>setFav(v=>!v)}>
+                {fav?'★':'☆'}
               </button>
             </div>
 
-            {/* LEFT */}
+            {/* LEFT: form */}
             <form className="form-card" onSubmit={submit}>
               <div className="f-group">
-                <label className="f-label"><LinkIcon /> Ссылка</label>
-                <input className="f-input" placeholder="https://t.me/username" value={link} onChange={e => setLink(e.target.value)} required />
+                <label className="f-label"><LinkIcon/> Ссылка</label>
+                <input className="f-input" placeholder="https://t.me/username" value={link} onChange={e=>setLink(e.target.value)} required/>
               </div>
 
               <div className="f-group">
                 <label className="f-label">Количество</label>
                 <div className="qty-row">
                   <div className="range-track">
-                    <input type="range" className="range-slider" min={minQ} max={maxQ} value={safeQty} onChange={handleSlider} style={{ '--pct': `${sliderPct}%` }} />
+                    <input type="range" className="range-slider" min={minQ} max={maxQ} value={safeQty} onChange={handleSlider} style={{'--pct':`${sliderPct}%`}}/>
                     <div className="slider-labels"><span>{fmt(minQ)}</span><span>{fmt(maxQ)}</span></div>
                   </div>
-                  <input type="text" className="qty-number-input" value={qtyRaw} onChange={handleQtyChange} onBlur={handleQtyBlur} />
+                  <input type="text" className="qty-number-input" value={qtyRaw} onChange={handleQtyChange} onBlur={handleQtyBlur}/>
                 </div>
                 <div className="qty-presets">
-                  {PRESETS.filter(p => p >= minQ && p <= maxQ).map(p => (
-                    <button key={p} type="button" className={`qty-preset${safeQty === p ? ' active' : ''}`} onClick={() => { const v=Math.max(minQ,Math.min(maxQ,p)); setQty(v); setQtyRaw(String(v)); }}>{fmt(p)}</button>
+                  {PRESETS.filter(p=>p>=minQ&&p<=maxQ).map(p=>(
+                    <button key={p} type="button" className={`qty-preset${safeQty===p?' active':''}`} onClick={()=>applyPreset(p)}>{fmt(p)}</button>
                   ))}
-                  <button type="button" className={`qty-preset${safeQty === maxQ ? ' active' : ''}`} onClick={() => { setQty(maxQ); setQtyRaw(String(maxQ)); }}>Макс</button>
+                  <button type="button" className={`qty-preset${safeQty===maxQ?' active':''}`} onClick={()=>applyPreset(maxQ)}>Макс</button>
                 </div>
               </div>
 
               <div className="f-group">
-                <div className={`toggle-row${useInterval ? ' open' : ''}`} onClick={() => setUseInterval(v => !v)}>
+                <div className={`toggle-row${useInterval?' open':''}`} onClick={()=>setUseInterval(v=>!v)}>
                   <div>
                     <div className="toggle-lbl">Интервальная подача</div>
                     <div className="toggle-sub">Равномерное распределение заказа</div>
                   </div>
-                  <div className={`toggle-sw${useInterval ? ' on' : ''}`} />
+                  <div className={`toggle-sw${useInterval?' on':''}`}/>
                 </div>
                 {useInterval && (
                   <div className="interval-fields">
                     <div className="int-field">
                       <label>Кол-во запусков</label>
-                      <input className="int-input" type="text" inputMode="numeric" placeholder="10" value={intRuns} onChange={e => setIntRuns(e.target.value.replace(/\D/g,''))} />
+                      <input className="int-input" type="text" inputMode="numeric" placeholder="10" value={intRuns} onChange={e=>setIntRuns(e.target.value.replace(/\D/g,''))}/>
                     </div>
                     <div className="int-field">
                       <label>Интервал (мин)</label>
-                      <input className="int-input" type="text" inputMode="numeric" placeholder="60" value={intMin} onChange={e => setIntMin(e.target.value.replace(/\D/g,''))} />
+                      <input className="int-input" type="text" inputMode="numeric" placeholder="60" value={intMin} onChange={e=>setIntMin(e.target.value.replace(/\D/g,''))}/>
                     </div>
                   </div>
                 )}
               </div>
 
               <button className="submit-btn" type="submit" disabled={busy}>
-                {busy ? <span className="spinner" style={{ width:18,height:18,borderTopColor:'white',verticalAlign:'middle' }} /> : `Запустить за ${total} ₽`}
+                {busy
+                  ? <span className="spinner" style={{width:18,height:18,borderTopColor:'white',verticalAlign:'middle'}}/>
+                  : `Запустить за ${total} ₽`}
               </button>
             </form>
 
-            {/* RIGHT */}
+            {/* RIGHT: info panel */}
             <div className="info-panel">
               <div className="price-card">
                 <div className="pc-label">Итого к оплате</div>
                 <div className="pc-amount">{total} ₽</div>
                 <div className="pc-sub">за {fmt(safeQty)} шт.</div>
-                <div className="pc-divider" />
+                <div className="pc-divider"/>
                 <div className="pc-row"><span className="pc-key">Цена за 1000</span><span className="pc-val">{rate} ₽</span></div>
                 <div className="pc-row"><span className="pc-key">Цена за 1 шт.</span><span className="pc-val">{(parseFloat(rate)/1000).toFixed(4)} ₽</span></div>
               </div>
@@ -347,20 +359,21 @@ export default function NewOrder() {
               <div className="info-chips">
                 <div className="info-chip"><div className="chip-lbl">ID услуги</div><div className="chip-val v">{svc.service}</div></div>
                 <div className="info-chip"><div className="chip-lbl">Скорость</div><div className="chip-val y">{speedLabel}</div></div>
-                <div className="info-chip"><div className="chip-lbl">Отмена</div><div className={`chip-val ${hasCancel ? 'g' : 'r'}`}>{hasCancel ? 'Есть' : 'Нет'}</div></div>
-                <div className="info-chip"><div className="chip-lbl">Мин / Макс</div><div className="chip-val" style={{ fontSize:11 }}>{fmt(svc.min)} / {fmt(svc.max)}</div></div>
+                <div className="info-chip"><div className="chip-lbl">Отмена</div><div className={`chip-val ${hasCancel?'g':'r'}`}>{hasCancel?'Есть':'Нет'}</div></div>
+                <div className="info-chip"><div className="chip-lbl">Мин / Макс</div><div className="chip-val" style={{fontSize:11}}>{fmt(svc.min)} / {fmt(svc.max)}</div></div>
               </div>
 
               <div className="desc-card">
-                <div className="desc-head" onClick={() => setDescOpen(v => !v)}>
-                  <span style={{ display:'flex',alignItems:'center',gap:7 }}><InfoIcon /> Описание услуги</span>
+                <div className="desc-head" onClick={()=>setDescOpen(v=>!v)}>
+                  <span style={{display:'flex',alignItems:'center',gap:7}}><InfoIcon/> Описание услуги</span>
                   <svg className={`desc-chevron${descOpen?' open':''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
                 </div>
                 <div className={`desc-body${descOpen?' open':''}`}>
-                  {svc.description || `Услуга "${svc.name}". Подача начинается в течение нескольких минут. Рекомендуем использовать открытые профили. После запуска отслеживайте прогресс в разделе "Мои заказы".`}
+                  {svc.description || `Услуга "${svc.name}". Подача начинается в течение нескольких минут. Рекомендуем открытые профили. Отслеживайте прогресс в "Мои заказы".`}
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </>

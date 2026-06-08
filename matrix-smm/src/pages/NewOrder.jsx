@@ -3,9 +3,8 @@ import { getServices, createOrder } from '../api/twiboost';
 import { icons, NETWORKS } from '../icons';
 import { useToast } from '../components/Toast';
 
-const USD_RUB = 90;
-const toRub    = (rate, qty) => { const r = parseFloat(rate); return (!r||isNaN(r)) ? '0.00' : ((r*USD_RUB*qty)/1000).toFixed(2); };
-const rateRub  = (rate)      => { const r = parseFloat(rate); return (!r||isNaN(r)) ? '0.00' : (r*USD_RUB).toFixed(2); };
+const toRub    = (rate, qty) => { const r = parseFloat(rate); return (!r||isNaN(r)) ? '0.00' : ((r*qty)/1000).toFixed(2); };
+const rateRub  = (rate)      => { const r = parseFloat(rate); return (!r||isNaN(r)) ? '0.00' : r.toFixed(2); };
 const fmt      = (n)         => Number(n).toLocaleString('ru-RU');
 
 const PRESETS = [100, 500, 1000, 5000, 10000];

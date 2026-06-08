@@ -8,29 +8,27 @@ import vkImg   from './assets/icons/vk.svg';
 import dcImg   from './assets/icons/discord.svg';
 import tcImg   from './assets/icons/twitch.svg';
 import spImg   from './assets/icons/spotify.svg';
-import fbImg   from './assets/icons/facebook.svg';
+import fbImg   from './assets/icons/facebook.png';
 import waImg   from './assets/icons/whatsapp.svg';
 import mxImg   from './assets/icons/max.svg';
 import webImg  from './assets/icons/web.svg';
 import kkImg   from './assets/icons/kick.svg';
-import trImg   from './assets/icons/trovo.svg';
+import trImg   from './assets/icons/trovo.png';
 import lkImg   from './assets/icons/likee.svg';
 import okImg   from './assets/icons/ok.svg';
-import vcImg   from './assets/icons/vcru.svg';
-import dtfImg  from './assets/icons/dtf.svg';
+import vcImg   from './assets/icons/vcru.png';
+import dtfImg  from './assets/icons/dtf.jpg';
 import pinImg  from './assets/icons/pinterest.svg';
-import rtImg   from './assets/icons/rutube.svg';
-import ypImg   from './assets/icons/yappy.svg';
+import rtImg   from './assets/icons/rutube.png';
+import ypImg   from './assets/icons/yappy.jpg';
 import dzImg   from './assets/icons/dzen.svg';
 import thImg   from './assets/icons/threads.svg';
 import liImg   from './assets/icons/linkedin.svg';
 import mdImg   from './assets/icons/medium.svg';
 import avImg   from './assets/icons/avito.svg';
-import wiImg   from './assets/icons/wibes.svg';
+import wiImg   from './assets/icons/wibes.png';
 import smImg   from './assets/icons/steam.svg';
 import shImg   from './assets/icons/shazam.svg';
-
-// To replace with real PNGs: put files in src/assets/icons/ and change .svg → .png in imports
 
 const I = ({ src, alt }) => (
   <img src={src} alt={alt} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', borderRadius:'inherit' }} />
@@ -69,10 +67,6 @@ export const icons = {
   steam:            <I src={smImg}   alt="Steam" />,
   shazam:           <I src={shImg}   alt="Shazam" />,
 };
-
-// ─── NETWORKS ─────────────────────────────────────────────────────────────────
-// keywords: used to match API `category` field to this network.
-// Subcategories are parsed dynamically from the API — no hardcoding needed.
 
 export const NETWORKS = [
   { id: 'telegram',  name: 'Telegram',       icon: 'telegram',  keywords: ['telegram'] },

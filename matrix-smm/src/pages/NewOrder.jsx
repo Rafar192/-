@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getServices, createOrder } from '../api/twiboost';
 import { icons, NETWORKS } from '../icons';
 import { useToast } from '../components/Toast';
@@ -47,6 +47,41 @@ const LinkIcon = () => (
   </svg>
 );
 
+// ── SpeedGauge ────────────────────────────────────────────
+function SpeedGauge({ speed }) {
+  const levels = { '0': 0.15, '1': 0.5, '2': 0.88 };
+  const pct = levels[String(speed)] ?? 0.5;
+  const angle = -150 + pct * 300;
+  const label = { '0':'Медленно','1':'Быстро','2':'Молниеносно' }[String(speed)] ?? 'Быстро';
+  const color = pct < 0.4 ? '#f59e0b' : pct < 0.7 ? '#10b981' : '#22d3ee';
+  const toXY = (deg, r) => {
+    const rad = (deg - 90) * Math.PI / 180;
+    return [90 + r * Math.cos(rad), 90 + r * Math.sin(rad)];
+  };
+  const arcPath = (startDeg, endDeg, r) => {
+    const [x1,y1] = toXY(startDeg, r);
+    const [x2,y2] = toXY(endDeg, r);
+    const large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+  };
+  const needleEnd = toXY(angle, 52);
+  return (
+    <div className="speed-gauge-wrap">
+      <svg viewBox="0 0 180 110" width="160" height="95">
+        <path d={arcPath(-150, 150, 68)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="10" strokeLinecap="round"/>
+        <path d={arcPath(-150, angle - 90, 68)} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
+          style={{filter:`drop-shadow(0 0 6px ${color})`}}/>
+        <line x1="90" y1="90" x2={needleEnd[0]} y2={needleEnd[1]} stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx="90" cy="90" r="5" fill={color}/>
+        <text x="18" y="100" fill="rgba(255,255,255,0.3)" fontSize="9" textAnchor="middle">Мед.</text>
+        <text x="90" y="20" fill="rgba(255,255,255,0.3)" fontSize="9" textAnchor="middle">Норм.</text>
+        <text x="162" y="100" fill="rgba(255,255,255,0.3)" fontSize="9" textAnchor="middle">Быст.</text>
+      </svg>
+      <div className="speed-label" style={{color}}>{label}</div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────
 export default function NewOrder() {
   const [services, setServices]     = useState([]);
@@ -56,7 +91,7 @@ export default function NewOrder() {
   const [inPremium, setInPremium]   = useState(false);  // inside Telegram Premium sub-tab
   const [cat, setCat]               = useState(null);   // { name, icon, services[] }
   const [svc, setSvc]               = useState(null);
-  const [search, setSearch]         = useState('');
+  const [comments, setComments]     = useState('');
   const [link, setLink]             = useState('');
   const [qty, setQty]               = useState(100);
   const [qtyRaw, setQtyRaw]         = useState('100');
@@ -102,13 +137,6 @@ export default function NewOrder() {
   // Total service count for a network
   const netCount = (n) => services.filter(s => svcMatchesNetwork(s, n)).length;
 
-  // Filtered networks for search
-  const filteredNets = useMemo(() => {
-    if (!search) return NETWORKS;
-    const q = search.toLowerCase();
-    return NETWORKS.filter(n => n.name.toLowerCase().includes(q));
-  }, [search]);
-
   // ── Order form state ──────────────────────────────────────
   const minQ    = svc ? Math.max(1, parseInt(svc.min) || 10) : 10;
   const maxQ    = svc ? parseInt(svc.max) || 100000 : 100000;
@@ -118,7 +146,7 @@ export default function NewOrder() {
   const rate    = svc ? rateRub(svc.rate) : '0.00';
 
   function pickNet(n) {
-    setNet(n); setSearch(''); setInPremium(false);
+    setNet(n); setInPremium(false);
     const count = services.filter(s => svcMatchesNetwork(s, n)).length;
     if (count === 0) { toast(`Для ${n.name} услуг пока нет`, 'error'); return; }
     setView('categories');
@@ -132,7 +160,7 @@ export default function NewOrder() {
     setSvc(s);
     const q = Math.max(1, parseInt(s.min) || 10);
     setQty(q); setQtyRaw(String(q));
-    setLink(''); setFav(false); setDescOpen(false);
+    setLink(''); setComments(''); setFav(false); setDescOpen(false);
     setUseInterval(false); setIntRuns(''); setIntMin('');
     setView('form');
   }
@@ -154,7 +182,10 @@ export default function NewOrder() {
     if (!link.trim()) { toast('Введите ссылку','error'); return; }
     setBusy(true);
     try {
-      const res = await createOrder({ service: svc.service, link: link.trim(), quantity: safeQty });
+      const isCustomComments = svc.type && svc.type.toLowerCase().includes('custom');
+      const orderPayload = { service: svc.service, link: link.trim(), quantity: safeQty };
+      if (isCustomComments && comments.trim()) orderPayload.comments = comments.trim();
+      const res = await createOrder(orderPayload);
       if (res.order) {
         toast(`Заказ #${res.order} создан`);
         const saved = JSON.parse(localStorage.getItem('orders')||'[]');
@@ -182,14 +213,8 @@ export default function NewOrder() {
         <span className="topbar-badge">{services.length} услуг</span>
       </div>
       <div className="page-content">
-        <div className="search-wrap">
-          <svg className="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
-          </svg>
-          <input placeholder="Поиск соцсети..." value={search} onChange={e=>setSearch(e.target.value)}/>
-        </div>
         <div className="network-grid">
-          {filteredNets.map(n => {
+          {NETWORKS.map(n => {
             const cnt = netCount(n);
             return (
               <div key={n.id} className="network-card-outer" onClick={()=>pickNet(n)}>
@@ -287,6 +312,7 @@ export default function NewOrder() {
     const hasCancel  = svc.cancel === '1' || svc.cancel === true || svc.cancel === 1;
     const speedLabel = { '0':'Медленно','1':'Быстро','2':'Молниеносно' }[svc.speed] || 'Быстро';
     const displayIcon = (cat?.icon) || net?.icon || 'telegram';
+    const isCustomComments = svc.type && svc.type.toLowerCase().includes('custom');
 
     return (
       <>
@@ -321,6 +347,13 @@ export default function NewOrder() {
                 <label className="f-label"><LinkIcon/> Ссылка</label>
                 <input className="f-input" placeholder="https://t.me/username" value={link} onChange={e=>setLink(e.target.value)} required/>
               </div>
+
+              {isCustomComments && (
+                <div className="f-group">
+                  <label className="f-label">Комментарии (по одному на строку)</label>
+                  <textarea className="f-textarea" rows={5} placeholder={"Комментарий 1\nКомментарий 2\n..."} value={comments} onChange={e=>setComments(e.target.value)}/>
+                </div>
+              )}
 
               <div className="f-group">
                 <label className="f-label">Количество</label>
@@ -373,7 +406,7 @@ export default function NewOrder() {
                   <span style={{display:'flex',alignItems:'center',gap:7}}><InfoIcon/> Описание услуги</span>
                   <svg className={`desc-chevron${descOpen?' open':''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
                 </div>
-                <div className={`desc-body${descOpen?' open':''}`}>
+                <div className={`desc-body${descOpen?' open':''}`} style={{whiteSpace:'pre-wrap'}}>
                   {svc.description || `Услуга "${svc.name}". Подача начинается в течение нескольких минут. Рекомендуем открытые профили. Отслеживайте прогресс в "Мои заказы".`}
                 </div>
               </div>
@@ -390,11 +423,13 @@ export default function NewOrder() {
                 <div className="pc-row"><span className="pc-key">Цена за 1 шт.</span><span className="pc-val">{(parseFloat(rate)/1000).toFixed(4)} ₽</span></div>
               </div>
 
+              <div className="speed-card">
+                <SpeedGauge speed={svc.speed ?? '1'} />
+              </div>
+
               <div className="info-chips">
                 <div className="info-chip"><div className="chip-lbl">ID услуги</div><div className="chip-val v">{svc.service}</div></div>
-                <div className="info-chip"><div className="chip-lbl">Скорость</div><div className="chip-val y">{speedLabel}</div></div>
                 <div className="info-chip"><div className="chip-lbl">Отмена</div><div className={`chip-val ${hasCancel?'g':'r'}`}>{hasCancel?'Есть':'Нет'}</div></div>
-                <div className="info-chip"><div className="chip-lbl">Мин / Макс</div><div className="chip-val" style={{fontSize:11}}>{fmt(svc.min)} / {fmt(svc.max)}</div></div>
               </div>
 
             </div>

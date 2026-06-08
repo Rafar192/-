@@ -13,7 +13,7 @@ export default function App() {
     new: <NewOrder />,
     orders: <MyOrders />,
     mass: <Stub title="Массовый заказ" icon="📦" />,
-    bonus: <Stub title="Бонус 3%" icon="🎁" />,
+    referral: <Stub title="Рефералка" icon="🔗" />,
     profile: <Stub title="Профиль" icon="👤" />,
     api: <Stub title="API" icon="⚙️" />,
     support: <Stub title="Поддержка" icon="💬" />,

@@ -225,16 +225,13 @@ body::after {
   background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(34,211,238,0.1), rgba(139,92,246,0.2));
   z-index: 0; pointer-events: none;
 }
-/* neon spin on hover */
+/* violet border glow on hover */
 .network-card-outer:hover::before {
-  background: conic-gradient(from var(--angle), var(--violet) 0%, var(--cyan) 25%, var(--violet2) 50%, var(--cyan2) 75%, var(--violet) 100%);
-  animation: spinBorder 2s linear infinite;
+  background: linear-gradient(135deg, var(--violet), var(--cyan));
 }
-@keyframes spinBorder { to { --angle: 360deg; } }
 
 .network-card-outer:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(139,92,246,0.18);
+  box-shadow: 0 0 0 2px var(--violet), 0 0 20px rgba(139,92,246,0.3);
 }
 
 .network-card-inner {
@@ -673,9 +670,7 @@ body::after {
 }
 @media (max-width: 900px) { .network-grid { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
-  .sidebar { display: none; }
   .info-chips { grid-template-columns: 1fr 1fr; }
-  .page-content { padding: 14px 16px; }
 }
 
 /* ── SUBCATEGORY GRID ─── */

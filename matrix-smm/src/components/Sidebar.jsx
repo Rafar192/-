@@ -13,7 +13,7 @@ const NAV = [
   {
     section: 'Аккаунт',
     items: [
-      { id: 'bonus',   label: 'Бонус 3%',   icon: GiftIcon },
+      { id: 'referral', label: 'Рефералка',  icon: GiftIcon },
       { id: 'profile', label: 'Профиль',    icon: UserIcon },
       { id: 'api',     label: 'API',        icon: CodeIcon },
       { id: 'support', label: 'Поддержка',  icon: SupportIcon },
@@ -27,8 +27,8 @@ export default function Sidebar({ page, setPage }) {
   useEffect(() => {
     getBalance()
       .then(d => {
-        const usd = parseFloat(d?.balance);
-        setBalance(isNaN(usd) ? '—' : (usd * 90).toFixed(2) + ' ₽');
+        const bal = parseFloat(d?.balance);
+        setBalance(isNaN(bal) ? '—' : bal.toFixed(2) + ' ₽');
       })
       .catch(() => setBalance('—'));
   }, []);

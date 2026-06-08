@@ -54,6 +54,7 @@ export default function NewOrder() {
   const [loading, setLoading]       = useState(true);
   const [view, setView]             = useState('networks'); // networks | categories | services | form
   const [net, setNet]               = useState(null);
+  const [inPremium, setInPremium]   = useState(false);  // inside Telegram Premium sub-tab
   const [cat, setCat]               = useState(null);   // { name, icon, services[] }
   const [svc, setSvc]               = useState(null);
   const [search, setSearch]         = useState('');
@@ -75,20 +76,26 @@ export default function NewOrder() {
   }, []);
 
   // ── Parse categories from API for selected network ────────
-  // Group services by their `category` field, only for current network
-  const catsForNet = useMemo(() => {
-    if (!net) return [];
+  const { regularCats, premiumCats } = useMemo(() => {
+    if (!net) return { regularCats: [], premiumCats: [] };
     const netSvcs = services.filter(s => svcMatchesNetwork(s, net));
-    // Group by category field
     const map = {};
     netSvcs.forEach(s => {
       const catName = s.category || s.name || 'Другое';
       if (!map[catName]) map[catName] = { name: catName, services: [], icon: iconForCat(catName, net) };
       map[catName].services.push(s);
     });
-    // Sort by service count desc
-    return Object.values(map).sort((a, b) => b.services.length - a.services.length);
+    const all = Object.values(map).sort((a, b) => b.services.length - a.services.length);
+    if (net.id === 'telegram') {
+      return {
+        premiumCats: all.filter(c => c.name.toLowerCase().includes('premium')),
+        regularCats: all.filter(c => !c.name.toLowerCase().includes('premium')),
+      };
+    }
+    return { regularCats: all, premiumCats: [] };
   }, [services, net]);
+
+  const catsForNet = inPremium ? premiumCats : regularCats;
 
   // Services in selected category
   const catServices = cat ? cat.services : [];
@@ -112,7 +119,7 @@ export default function NewOrder() {
   const rate    = svc ? rateRub(svc.rate) : '0.00';
 
   function pickNet(n) {
-    setNet(n); setSearch('');
+    setNet(n); setSearch(''); setInPremium(false);
     const count = services.filter(s => svcMatchesNetwork(s, n)).length;
     if (count === 0) { toast(`Для ${n.name} услуг пока нет`, 'error'); return; }
     setView('categories');
@@ -204,33 +211,50 @@ export default function NewOrder() {
   );
 
   /* ── 2. CATEGORIES (from API) ── */
-  if (view === 'categories') return (
-    <>
-      <div className="topbar">
-        <button className="back-btn" onClick={()=>setView('networks')}><BackIcon/> Назад</button>
-        <span className="topbar-title">{net.name}</span>
-        <span className="topbar-badge">{catsForNet.length} категорий</span>
-      </div>
-      <div className="page-content">
-        {catsForNet.length === 0 ? (
-          <div className="empty-state"><div className="ico">?</div><h3>Нет категорий</h3><p>API не вернул категории для {net.name}</p></div>
-        ) : (
-          <div className="subcat-grid">
-            {catsForNet.map(c => (
-              <div key={c.name} className="subcat-card" onClick={()=>pickCat(c)}>
-                <div className="subcat-icon">{icons[c.icon] || icons[net.icon]}</div>
-                <div className="subcat-body">
-                  <div className="subcat-name">{c.name}</div>
-                  <div className="subcat-count">{c.services.length} услуг</div>
+  if (view === 'categories') {
+    const totalPremSvcs = premiumCats.reduce((s, c) => s + c.services.length, 0);
+    return (
+      <>
+        <div className="topbar">
+          <button className="back-btn" onClick={() => {
+            if (inPremium) { setInPremium(false); } else { setView('networks'); }
+          }}><BackIcon/> Назад</button>
+          <span className="topbar-title">{inPremium ? 'Telegram Premium' : net.name}</span>
+          <span className="topbar-badge">{catsForNet.length} категорий</span>
+        </div>
+        <div className="page-content">
+          {catsForNet.length === 0 && !(!inPremium && premiumCats.length > 0) ? (
+            <div className="empty-state"><div className="ico">?</div><h3>Нет категорий</h3><p>API не вернул категории для {net.name}</p></div>
+          ) : (
+            <div className="subcat-grid">
+              {/* Telegram Premium special card — show only when NOT in premium mode */}
+              {!inPremium && premiumCats.length > 0 && (
+                <div className="subcat-card premium" onClick={() => setInPremium(true)}>
+                  <div className="subcat-icon">{icons['telegram_premium']}</div>
+                  <div className="subcat-body">
+                    <div className="subcat-name">Telegram Premium</div>
+                    <div className="subcat-count">{totalPremSvcs} услуг</div>
+                    <span className="premium-badge">Premium</span>
+                  </div>
+                  <ChevRight/>
                 </div>
-                <ChevRight/>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
-  );
+              )}
+              {catsForNet.map(c => (
+                <div key={c.name} className="subcat-card" onClick={()=>pickCat(c)}>
+                  <div className="subcat-icon">{icons[c.icon] || icons[net.icon]}</div>
+                  <div className="subcat-body">
+                    <div className="subcat-name">{c.name}</div>
+                    <div className="subcat-count">{c.services.length} услуг</div>
+                  </div>
+                  <ChevRight/>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
 
   /* ── 3. SERVICES ── */
   if (view === 'services') return (
@@ -343,6 +367,17 @@ export default function NewOrder() {
                   ? <span className="spinner" style={{width:18,height:18,borderTopColor:'white',verticalAlign:'middle'}}/>
                   : `Запустить за ${total} ₽`}
               </button>
+
+              <hr className="desc-divider"/>
+              <div className="desc-card">
+                <div className="desc-head" onClick={()=>setDescOpen(v=>!v)}>
+                  <span style={{display:'flex',alignItems:'center',gap:7}}><InfoIcon/> Описание услуги</span>
+                  <svg className={`desc-chevron${descOpen?' open':''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div className={`desc-body${descOpen?' open':''}`}>
+                  {svc.description || `Услуга "${svc.name}". Подача начинается в течение нескольких минут. Рекомендуем открытые профили. Отслеживайте прогресс в "Мои заказы".`}
+                </div>
+              </div>
             </form>
 
             {/* RIGHT: info panel */}
@@ -363,15 +398,6 @@ export default function NewOrder() {
                 <div className="info-chip"><div className="chip-lbl">Мин / Макс</div><div className="chip-val" style={{fontSize:11}}>{fmt(svc.min)} / {fmt(svc.max)}</div></div>
               </div>
 
-              <div className="desc-card">
-                <div className="desc-head" onClick={()=>setDescOpen(v=>!v)}>
-                  <span style={{display:'flex',alignItems:'center',gap:7}}><InfoIcon/> Описание услуги</span>
-                  <svg className={`desc-chevron${descOpen?' open':''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                </div>
-                <div className={`desc-body${descOpen?' open':''}`}>
-                  {svc.description || `Услуга "${svc.name}". Подача начинается в течение нескольких минут. Рекомендуем открытые профили. Отслеживайте прогресс в "Мои заказы".`}
-                </div>
-              </div>
             </div>
 
           </div>

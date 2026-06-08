@@ -254,14 +254,14 @@ body::after {
 }
 
 .net-icon-wrap {
-  width: 50px; height: 50px; border-radius: 14px;
+  width: 50px; height: 50px; border-radius: 50%;
   overflow: hidden; flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   position: relative;
 }
 .net-icon-wrap::after {
   content: ''; position: absolute; top:0;left:0;right:0;height:40%;
-  background: rgba(255,255,255,0.09); border-radius: 14px 14px 0 0; pointer-events:none;
+  background: rgba(255,255,255,0.09); border-radius: 50% 50% 0 0; pointer-events:none;
 }
 .net-icon-wrap img,
 .net-icon-wrap svg { width:100%;height:100%;display:block;object-fit:cover; }
@@ -310,7 +310,7 @@ body::after {
 .service-item:hover { border-color: rgba(139,92,246,0.35); background: var(--bg3); transform: translateX(5px); }
 .service-item:hover::after { opacity: 1; }
 
-.svc-icon { width: 36px; height: 36px; border-radius: 10px; overflow:hidden; flex-shrink:0; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.svc-icon { width: 36px; height: 36px; border-radius: 50%; overflow:hidden; flex-shrink:0; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 .svc-icon img, .svc-icon svg { width:100%;height:100%;display:block;object-fit:cover; }
 .svc-name { flex: 1; font-weight: 500; font-size: 13px; color: var(--text); line-height: 1.4; }
 .svc-price-val {
@@ -344,7 +344,7 @@ body::after {
   background: linear-gradient(90deg, transparent, var(--violet), var(--cyan), transparent);
   opacity: 0.6;
 }
-.svc-header-icon { width: 56px; height: 56px; border-radius: 15px; overflow:hidden; flex-shrink:0; box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 20px rgba(139,92,246,0.15); }
+.svc-header-icon { width: 56px; height: 56px; border-radius: 50%; overflow:hidden; flex-shrink:0; box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 20px rgba(139,92,246,0.15); }
 .svc-header-icon img, .svc-header-icon svg { width:100%;height:100%;display:block;object-fit:cover; }
 .svc-header-body { flex: 1; }
 .svc-header-name { font-size: 17px; font-weight: 800; line-height: 1.35; }
@@ -565,6 +565,29 @@ body::after {
 }
 .desc-body.open { max-height: 300px; padding: 0 16px 15px; }
 
+/* Divider before description */
+.desc-divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 14px 0 10px;
+}
+
+/* Telegram Premium special card */
+.subcat-card.premium {
+  border-color: rgba(255, 185, 0, 0.35);
+  background: linear-gradient(135deg, rgba(255,185,0,0.07) 0%, rgba(139,92,246,0.05) 100%);
+}
+.subcat-card.premium:hover {
+  border-color: rgba(255,185,0,0.55);
+  background: linear-gradient(135deg, rgba(255,185,0,0.12) 0%, rgba(139,92,246,0.08) 100%);
+}
+.premium-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: 1px;
+  color: #ffb900; background: rgba(255,185,0,0.15);
+  border: 1px solid rgba(255,185,0,0.3); border-radius: 6px;
+  padding: 2px 6px; text-transform: uppercase; margin-top: 3px;
+  display: inline-block;
+}
+
 /* Submit button */
 .submit-btn {
   width: 100%; padding: 15px;
@@ -678,7 +701,7 @@ body::after {
 .subcat-card:hover { border-color: rgba(139,92,246,0.35); background: var(--bg3); transform: translateX(5px); }
 .subcat-card:hover::after { opacity:1; }
 
-.subcat-icon { width: 44px; height: 44px; border-radius: 12px; overflow:hidden; flex-shrink:0; box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
+.subcat-icon { width: 44px; height: 44px; border-radius: 50%; overflow:hidden; flex-shrink:0; box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
 .subcat-icon img, .subcat-icon svg { width:100%;height:100%;display:block;object-fit:cover; }
 .subcat-body { flex: 1; }
 .subcat-name { font-weight: 700; font-size: 14px; }
